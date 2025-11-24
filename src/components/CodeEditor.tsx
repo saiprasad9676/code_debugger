@@ -45,6 +45,20 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   // API Key State
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
 
+  // Update code when initialCode changes (for workspace loading)
+  useEffect(() => {
+    if (initialCode && initialCode !== code) {
+      setCode(initialCode);
+    }
+  }, [initialCode]);
+
+  // Update language when prop changes
+  useEffect(() => {
+    if (language && language !== selectedLanguage) {
+      setSelectedLanguage(language);
+    }
+  }, [language]);
+
   useEffect(() => {
     const loadPyodideScript = async () => {
       if (selectedLanguage === 'python' && !pyodide && !isPyodideLoading) {
