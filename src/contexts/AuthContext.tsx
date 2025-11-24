@@ -68,25 +68,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             initGoogleSignIn(
                 containerId,
-                (payload) => {
-                    // Payload contains fields like `sub`, `email`, `name`, `picture`
-                    // Convert it into a Firebase‑compatible `User` shape (optional)
-                    const fakeUser: User = {
-                        uid: payload.sub,
-                        displayName: payload.name,
-                        email: payload.email,
-                        photoURL: payload.picture,
-                        // The following fields are not used in our UI, but we provide stubs
-                        emailVerified: true,
-                        isAnonymous: false,
-                        providerId: 'google.com',
-                        // @ts-ignore – these are part of the Firebase User interface
-                        getIdToken: async () => payload.sub,
-                        // ...other methods can be no‑ops
-                    } as unknown as User;
+                async (payload) => {
+                    try {
+                        // Payload contains fields like `sub`, `email`, `name`, `picture`
+                        const userData = {
+                            uid: payload.sub,
+                            email: payload.email,
+                            displayName: payload.name,
+                            photoURL: payload.picture,
+                        };
 
-                    setUser(fakeUser);
-                    resolve();
+                        // Send to backend to store in Cosmos DB
+                        const response = await fetch('http://localhost:3000/api/auth/google', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(userData),
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to sync user with database');
+                        }
+
+                        const dbUser = await response.json();
+
+                        // Convert it into a Firebase‑compatible `User` shape (optional)
+                        const fakeUser: User = {
+                            uid: dbUser.uid,
+                            displayName: dbUser.displayName,
+                            email: dbUser.email,
+                            photoURL: dbUser.photoURL,
+                            // The following fields are not used in our UI, but we provide stubs
+                            emailVerified: true,
+                            isAnonymous: false,
+                            providerId: 'google.com',
+                            // @ts-ignore – these are part of the Firebase User interface
+                            getIdToken: async () => dbUser.uid,
+                            // ...other methods can be no‑ops
+                        } as unknown as User;
+
+                        setUser(fakeUser);
+                        resolve();
+                    } catch (err) {
+                        console.error('Error syncing user:', err);
+                        reject(err);
+                    }
                 },
                 (err) => {
                     console.error('Google Sign‑In error', err);

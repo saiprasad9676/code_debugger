@@ -12,9 +12,71 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Cosmos DB Setup
+const { CosmosClient } = require("@azure/cosmos");
+const COSMOSDB_URI = process.env.COSMOSDB_URI;
+const COSMOSDB_KEY = process.env.COSMOSDB_KEY;
+const DATABASE_ID = "CodeDebuggerDB";
+const CONTAINER_ID = "Users";
+
+let cosmosClient;
+let userContainer;
+
+if (COSMOSDB_URI && COSMOSDB_KEY) {
+    cosmosClient = new CosmosClient({ endpoint: COSMOSDB_URI, key: COSMOSDB_KEY });
+    userContainer = cosmosClient.database(DATABASE_ID).container(CONTAINER_ID);
+    console.log("Cosmos DB Client Initialized");
+} else {
+    console.warn("Cosmos DB credentials missing. User persistence will not work.");
+}
+
 // Routes
 app.get('/', (req, res) => {
     res.send('CodeGenius Backend is running');
+});
+
+// Auth Route
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        const { uid, email, displayName, photoURL } = req.body;
+
+        if (!userContainer) {
+            return res.status(503).json({ error: "Database service unavailable" });
+        }
+
+        // Check if user exists
+        const querySpec = {
+            query: "SELECT * FROM c WHERE c.email = @email",
+            parameters: [{ name: "@email", value: email }]
+        };
+
+        const { resources: existingUsers } = await userContainer.items.query(querySpec).fetchAll();
+
+        if (existingUsers.length > 0) {
+            // User exists, return user data
+            console.log(`User logged in: ${email}`);
+            return res.json(existingUsers[0]);
+        } else {
+            // Create new user
+            const newUser = {
+                id: uid, // Use Firebase UID as document ID
+                uid,
+                email,
+                displayName,
+                photoURL,
+                createdAt: new Date().toISOString(),
+                lastLogin: new Date().toISOString()
+            };
+
+            const { resource: createdUser } = await userContainer.items.create(newUser);
+            console.log(`New user created: ${email}`);
+            return res.json(createdUser);
+        }
+
+    } catch (error) {
+        console.error("Auth Error:", error);
+        res.status(500).json({ error: "Authentication failed" });
+    }
 });
 
 app.post('/api/generate', async (req, res) => {

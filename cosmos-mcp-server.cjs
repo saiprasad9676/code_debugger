@@ -111,7 +111,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             }
 
             case "list_databases": {
-                const { databases } = await client.databases.readAll().fetchAll();
+                const { resources: databases } = await client.databases.readAll().fetchAll();
                 const dbNames = databases.map(db => db.id);
 
                 return {
@@ -127,7 +127,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             case "list_containers": {
                 const { database } = args;
                 const db = client.database(database);
-                const { containers } = await db.containers.readAll().fetchAll();
+                const { resources: containers } = await db.containers.readAll().fetchAll();
                 const containerNames = containers.map(c => c.id);
 
                 return {

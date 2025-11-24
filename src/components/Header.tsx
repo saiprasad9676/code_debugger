@@ -8,6 +8,7 @@ import { useFadeIn } from '@/utils/animations';
 import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { Profile } from '@/components/Profile';
 
 const Header: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -83,27 +84,7 @@ const Header: React.FC = () => {
               {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
             {user ? (
-              <>
-                <div className="flex items-center space-x-2">
-                  {user.photoURL && (
-                    <img
-                      src={user.photoURL}
-                      alt={user.displayName || 'User'}
-                      className="h-8 w-8 rounded-full"
-                    />
-                  )}
-                  <span className="text-sm font-medium">{user.displayName}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="rounded-full"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-              </>
+              <Profile />
             ) : (
               <>
                 <GlitchButton
