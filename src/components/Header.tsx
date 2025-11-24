@@ -35,8 +35,9 @@ const Header: React.FC = () => {
     try {
       await signInWithGoogle();
       toast.success('Successfully signed in!');
-    } catch (error) {
-      toast.error('Failed to sign in. Please try again.');
+    } catch (error: any) {
+      console.error('Sign in error details:', error);
+      toast.error(`Failed to sign in: ${error.message || 'Unknown error'}`);
     }
   };
 

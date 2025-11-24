@@ -10,6 +10,16 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+// Debug: Check if config is loaded
+console.log('Firebase Config Check:', {
+    apiKey: !!firebaseConfig.apiKey,
+    authDomain: !!firebaseConfig.authDomain,
+    projectId: !!firebaseConfig.projectId,
+    storageBucket: !!firebaseConfig.storageBucket,
+    messagingSenderId: !!firebaseConfig.messagingSenderId,
+    appId: !!firebaseConfig.appId
+});
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
