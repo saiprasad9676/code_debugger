@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const axios = require('axios');
 
 dotenv.config();
 
@@ -22,35 +23,39 @@ app.post('/api/generate', async (req, res) => {
         const apiKey = process.env.GEMINI_API_KEY;
 
         if (!apiKey) {
+            console.error("Error: GEMINI_API_KEY is missing");
             return res.status(500).json({ error: 'API key not configured on server' });
         }
 
         console.log("Processing request for:", text.substring(0, 50) + "...");
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text }] }],
-                generationConfig: {
-                    maxOutputTokens: maxTokens,
-                    temperature
+        try {
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+                {
+                    contents: [{ parts: [{ text }] }],
+                    generationConfig: {
+                        maxOutputTokens: maxTokens,
+                        temperature
+                    }
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
                 }
-            })
-        });
+            );
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error("Gemini API Error:", errorData);
-            return res.status(response.status).json({
-                error: errorData.error?.message || response.statusText
-            });
+            const data = response.data;
+            res.json(data);
+
+        } catch (apiError) {
+            console.error("Gemini API Error:", apiError.response?.data || apiError.message);
+            const status = apiError.response?.status || 500;
+            const message = apiError.response?.data?.error?.message || apiError.message;
+
+            res.status(status).json({ error: message });
         }
-
-        const data = await response.json();
-        res.json(data);
 
     } catch (error) {
         console.error("Server Error:", error);
