@@ -80,6 +80,29 @@ app.post('/api/auth/google', async (req, res) => {
     }
 });
 
+// Get User Profile
+app.get('/api/user/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+
+        if (!userContainer) {
+            return res.status(503).json({ error: "Database service unavailable" });
+        }
+
+        const { resource: user } = await userContainer.item(uid, uid).read();
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        return res.json(user);
+
+    } catch (error) {
+        console.error("Fetch Error:", error);
+        res.status(500).json({ error: "Failed to fetch profile" });
+    }
+});
+
 // Update User Profile
 app.put('/api/user/:uid', async (req, res) => {
     try {

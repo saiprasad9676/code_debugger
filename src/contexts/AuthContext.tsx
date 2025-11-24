@@ -43,13 +43,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     useEffect(() => {
         handleRedirectResult().catch((e) => console.error('Redirect error', e));
 
-        const unsubscribe = onAuthStateChanged(auth, (u) => {
+        const unsubscribe = onAuthStateChanged(auth, async (u) => {
             setUser(u);
+
+            if (u) {
+                // Fetch user profile from backend to check if profile is complete
+                try {
+                    const response = await fetch(`${API_URL}/api/user/${u.uid}`);
+                    if (response.ok) {
+                        const userData = await response.json();
+                        // If profile is not complete, mark as new user
+                        setIsNewUser(!userData.isProfileComplete);
+                    } else {
+                        // If user doesn't exist in DB, they are new
+                        setIsNewUser(true);
+                    }
+                } catch (error) {
+                    console.error("Error fetching user profile:", error);
+                    setIsNewUser(false);
+                }
+            } else {
+                setIsNewUser(false);
+            }
+
             setLoading(false);
         });
 
         return unsubscribe;
-    }, []);
+    }, [API_URL]);
 
     const signInWithGoogle = async () => {
         return new Promise<void>((resolve, reject) => {
