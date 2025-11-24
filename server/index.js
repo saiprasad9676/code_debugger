@@ -198,29 +198,35 @@ app.post('/api/generate', async (req, res) => {
     }
 });
 
-// Save Workspace
+
+// Create New Workspace
 app.post('/api/workspace/:uid', async (req, res) => {
     try {
         const { uid } = req.params;
-        const { code, chatHistory, language } = req.body;
+        const { name, code, chatHistory, language } = req.body;
 
         if (!workspacesContainer) {
             return res.status(503).json({ error: "Database service unavailable" });
         }
 
-        const workspaceId = `workspace_${uid}`;
+        if (!name) {
+            return res.status(400).json({ error: "Workspace name is required" });
+        }
+
+        const workspaceId = `${uid}_${Date.now()}`;
         const workspace = {
             id: workspaceId,
             uid,
+            name,
             code: code || "",
             chatHistory: chatHistory || [],
             language: language || "javascript",
+            createdAt: new Date().toISOString(),
             lastSaved: new Date().toISOString()
         };
 
-        // Upsert (create or replace)
-        await workspacesContainer.items.upsert(workspace);
-        console.log(`Workspace saved for user: ${uid}`);
+        await workspacesContainer.items.create(workspace);
+        console.log(`Workspace '${name}' created for user: ${uid}`);
         return res.json({ message: "Workspace saved successfully", workspace });
 
     } catch (error) {
@@ -229,8 +235,45 @@ app.post('/api/workspace/:uid', async (req, res) => {
     }
 });
 
-// Load Workspace
-app.get('/api/workspace/:uid', async (req, res) => {
+// Update Workspace
+app.put('/api/workspace/:workspaceId', async (req, res) => {
+    try {
+        const { workspaceId } = req.params;
+        const { code, chatHistory, language } = req.body;
+
+        if (!workspacesContainer) {
+            return res.status(503).json({ error: "Database service unavailable" });
+        }
+
+        const querySpec = {
+            query: "SELECT * FROM c WHERE c.id = @workspaceId",
+            parameters: [{ name: "@workspaceId", value: workspaceId }]
+        };
+
+        const { resources } = await workspacesContainer.items.query(querySpec).fetchAll();
+
+        if (resources.length === 0) {
+            return res.status(404).json({ error: "Workspace not found" });
+        }
+
+        const workspace = resources[0];
+        workspace.code = code !== undefined ? code : workspace.code;
+        workspace.chatHistory = chatHistory !== undefined ? chatHistory : workspace.chatHistory;
+        workspace.language = language !== undefined ? language : workspace.language;
+        workspace.lastSaved = new Date().toISOString();
+
+        await workspacesContainer.item(workspaceId, workspace.uid).replace(workspace);
+        console.log(`Workspace updated: ${workspaceId}`);
+        return res.json({ message: "Workspace updated successfully", workspace });
+
+    } catch (error) {
+        console.error("Update Workspace Error:", error);
+        res.status(500).json({ error: "Failed to update workspace" });
+    }
+});
+
+// Get All Workspaces for User
+app.get('/api/workspaces/:uid', async (req, res) => {
     try {
         const { uid } = req.params;
 
@@ -238,22 +281,41 @@ app.get('/api/workspace/:uid', async (req, res) => {
             return res.status(503).json({ error: "Database service unavailable" });
         }
 
-        const workspaceId = `workspace_${uid}`;
+        const querySpec = {
+            query: "SELECT * FROM c WHERE c.uid = @uid ORDER BY c.lastSaved DESC",
+            parameters: [{ name: "@uid", value: uid }]
+        };
 
-        try {
-            const { resource: workspace } = await workspacesContainer.item(workspaceId, uid).read();
-            return res.json(workspace);
-        } catch (error) {
-            if (error.code === 404) {
-                // No workspace found, return empty
-                return res.json({
-                    code: "",
-                    chatHistory: [],
-                    language: "javascript"
-                });
-            }
-            throw error;
+        const { resources: workspaces } = await workspacesContainer.items.query(querySpec).fetchAll();
+        return res.json(workspaces);
+
+    } catch (error) {
+        console.error("Get Workspaces Error:", error);
+        res.status(500).json({ error: "Failed to load workspaces" });
+    }
+});
+
+// Load Specific Workspace
+app.get('/api/workspace/:workspaceId', async (req, res) => {
+    try {
+        const { workspaceId } = req.params;
+
+        if (!workspacesContainer) {
+            return res.status(503).json({ error: "Database service unavailable" });
         }
+
+        const querySpec = {
+            query: "SELECT * FROM c WHERE c.id = @workspaceId",
+            parameters: [{ name: "@workspaceId", value: workspaceId }]
+        };
+
+        const { resources } = await workspacesContainer.items.query(querySpec).fetchAll();
+
+        if (resources.length === 0) {
+            return res.status(404).json({ error: "Workspace not found" });
+        }
+
+        return res.json(resources[0]);
 
     } catch (error) {
         console.error("Load Workspace Error:", error);
@@ -261,6 +323,26 @@ app.get('/api/workspace/:uid', async (req, res) => {
     }
 });
 
+// Delete Workspace
+app.delete('/api/workspace/:workspaceId/:uid', async (req, res) => {
+    try {
+        const { workspaceId, uid } = req.params;
+
+        if (!workspacesContainer) {
+            return res.status(503).json({ error: "Database service unavailable" });
+        }
+
+        await workspacesContainer.item(workspaceId, uid).delete();
+        console.log(`Workspace deleted: ${workspaceId}`);
+        return res.json({ message: "Workspace deleted successfully" });
+
+    } catch (error) {
+        console.error("Delete Workspace Error:", error);
+        res.status(500).json({ error: "Failed to delete workspace" });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
