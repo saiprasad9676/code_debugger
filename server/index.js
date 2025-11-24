@@ -30,9 +30,9 @@ app.post('/api/generate', async (req, res) => {
         console.log("Processing request for:", text.substring(0, 50) + "...");
 
         try {
-            // Using gemini-1.5-pro as it is the current stable version
+            // Using gemini-pro-latest
             const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=${apiKey}`,
                 {
                     contents: [{ parts: [{ text }] }],
                     generationConfig: {
