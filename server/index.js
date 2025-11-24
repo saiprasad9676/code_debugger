@@ -55,7 +55,7 @@ app.post('/api/auth/google', async (req, res) => {
         if (existingUsers.length > 0) {
             // User exists, return user data
             console.log(`User logged in: ${email}`);
-            return res.json(existingUsers[0]);
+            return res.json({ ...existingUsers[0], isNewUser: false });
         } else {
             // Create new user
             const newUser = {
@@ -65,17 +65,53 @@ app.post('/api/auth/google', async (req, res) => {
                 displayName,
                 photoURL,
                 createdAt: new Date().toISOString(),
-                lastLogin: new Date().toISOString()
+                lastLogin: new Date().toISOString(),
+                isProfileComplete: false
             };
 
             const { resource: createdUser } = await userContainer.items.create(newUser);
             console.log(`New user created: ${email}`);
-            return res.json(createdUser);
+            return res.json({ ...createdUser, isNewUser: true });
         }
 
     } catch (error) {
         console.error("Auth Error:", error);
         res.status(500).json({ error: "Authentication failed" });
+    }
+});
+
+// Update User Profile
+app.put('/api/user/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+        const updates = req.body;
+
+        if (!userContainer) {
+            return res.status(503).json({ error: "Database service unavailable" });
+        }
+
+        // Fetch existing user
+        const { resource: user } = await userContainer.item(uid, uid).read();
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Update fields
+        const updatedUser = {
+            ...user,
+            ...updates,
+            isProfileComplete: true,
+            updatedAt: new Date().toISOString()
+        };
+
+        const { resource: savedUser } = await userContainer.item(uid, uid).replace(updatedUser);
+        console.log(`User updated: ${uid}`);
+        return res.json(savedUser);
+
+    } catch (error) {
+        console.error("Update Error:", error);
+        res.status(500).json({ error: "Failed to update profile" });
     }
 });
 

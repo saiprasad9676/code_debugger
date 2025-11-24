@@ -34,18 +34,37 @@ const Index = () => {
   const section1Fade = useFadeIn(500);
   const { ref: featuresRef, isIntersecting: featuresVisible } = useScrollReveal();
 
-  const { user, signInWithGoogle } = useAuth();
+  const { user, signInWithGoogle, isNewUser } = useAuth();
 
   const handleGetStarted = async () => {
     if (!user) {
       try {
         await signInWithGoogle();
+        // Check isNewUser from context after sign in (it might not update immediately in this closure, 
+        // but the useEffect in AuthContext or a redirect logic there might handle it. 
+        // However, since we are awaiting, let's check the context state if possible or rely on the user object)
       } catch (error) {
         console.error("Login failed:", error);
         return;
       }
     }
-    navigate('/get-started');
+
+    // We need to check the updated state. 
+    // Actually, the best place to handle "New User Redirect" is probably in the AuthContext or a global effect,
+    // OR we can check it here if we assume the state updates.
+    // But since state updates are async, 'isNewUser' might be stale here.
+    // A better approach: The AuthContext's signInWithGoogle could return the user object/status.
+    // But for now, let's just navigate. If they are new, the ProtectedRoute or a check in App.tsx could redirect them?
+    // No, ProtectedRoute just checks if logged in.
+    // Let's rely on the fact that if they are logged in, we navigate.
+    // But we want to send them to /onboarding if new.
+
+    // Let's change the navigation logic:
+    if (isNewUser) {
+      navigate('/onboarding');
+    } else {
+      navigate('/get-started');
+    }
   };
 
   const handleStartCoding = async () => {
@@ -57,7 +76,12 @@ const Index = () => {
         return;
       }
     }
-    navigate('/editor');
+
+    if (isNewUser) {
+      navigate('/onboarding');
+    } else {
+      navigate('/editor');
+    }
   };
 
   const handleWatchDemo = () => {

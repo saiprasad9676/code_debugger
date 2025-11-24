@@ -5,8 +5,9 @@ import React, {
     useEffect,
     ReactNode,
 } from 'react';
-import { User } from 'firebase/auth'; // keep the type for consistency
-import { auth, handleRedirectResult } from '@/lib/firebase'; // still keep Firebase auth for session persistence
+import { User } from 'firebase/auth';
+import { auth, handleRedirectResult } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
     initGoogleSignIn,
     signOutGoogle,
@@ -15,8 +16,10 @@ import {
 interface AuthContextType {
     user: User | null;
     loading: boolean;
+    isNewUser: boolean;
     signInWithGoogle: () => Promise<void>;
     signOut: () => Promise<void>;
+    updateProfile: (data: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,15 +37,13 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isNewUser, setIsNewUser] = useState(false);
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-    // -----------------------------------------------------------------
-    // 1️⃣ Keep Firebase onAuthStateChanged for session persistence
-    // -----------------------------------------------------------------
     useEffect(() => {
-        // Handle redirect result (if you ever use redirect flow)
         handleRedirectResult().catch((e) => console.error('Redirect error', e));
 
-        const unsubscribe = auth.onAuthStateChanged((u) => {
+        const unsubscribe = onAuthStateChanged(auth, (u) => {
             setUser(u);
             setLoading(false);
         });
@@ -50,18 +51,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return unsubscribe;
     }, []);
 
-    // -----------------------------------------------------------------
-    // 2️⃣ Google Sign‑In wrapper
-    // -----------------------------------------------------------------
     const signInWithGoogle = async () => {
         return new Promise<void>((resolve, reject) => {
-            // Create a temporary hidden container for the GIS button
             const containerId = 'gsi-button-container';
             let container = document.getElementById(containerId);
             if (!container) {
                 container = document.createElement('div');
                 container.id = containerId;
-                // Keep it hidden – we only need the button for the pop‑up flow
                 container.style.display = 'none';
                 document.body.appendChild(container);
             }
@@ -70,50 +66,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 containerId,
                 async (payload) => {
                     try {
-                        // Payload contains fields like `sub`, `email`, `name`, `picture`
-                        const userData = {
-                            uid: payload.sub,
-                            email: payload.email,
-                            displayName: payload.name,
-                            photoURL: payload.picture,
-                        };
-
-                        // Send to backend to store in Cosmos DB
-                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-                        const response = await fetch(`${apiUrl}/api/auth/google`, {
+                        const response = await fetch(`${API_URL}/api/auth/google`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify(userData),
+                            body: JSON.stringify({
+                                uid: payload.sub,
+                                email: payload.email,
+                                displayName: payload.name,
+                                photoURL: payload.picture
+                            }),
                         });
 
                         if (!response.ok) {
                             throw new Error('Failed to sync user with database');
                         }
 
-                        const dbUser = await response.json();
+                        const userData = await response.json();
 
-                        // Convert it into a Firebase‑compatible `User` shape (optional)
-                        const fakeUser: User = {
-                            uid: dbUser.uid,
-                            displayName: dbUser.displayName,
-                            email: dbUser.email,
-                            photoURL: dbUser.photoURL,
-                            // The following fields are not used in our UI, but we provide stubs
+                        setIsNewUser(userData.isNewUser);
+
+                        const userObj: User = {
+                            uid: userData.uid,
+                            displayName: userData.displayName,
+                            email: userData.email,
+                            photoURL: userData.photoURL,
                             emailVerified: true,
                             isAnonymous: false,
                             providerId: 'google.com',
-                            // @ts-ignore – these are part of the Firebase User interface
-                            getIdToken: async () => dbUser.uid,
-                            // ...other methods can be no‑ops
+                            getIdToken: async () => userData.uid,
                         } as unknown as User;
 
-                        setUser(fakeUser);
+                        setUser(userObj);
                         resolve();
-                    } catch (err) {
-                        console.error('Error syncing user:', err);
-                        reject(err);
+                    } catch (error) {
+                        console.error("Error syncing user:", error);
+                        reject(error);
                     }
                 },
                 (err) => {
@@ -124,21 +113,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
     };
 
-    // -----------------------------------------------------------------
-    // 4️⃣ Sign‑out wrapper
-    // -----------------------------------------------------------------
+    const updateProfile = async (data: any) => {
+        if (!user) return;
+        try {
+            const response = await fetch(`${API_URL}/api/user/${user.uid}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update profile');
+            }
+
+            setIsNewUser(false);
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            throw error;
+        }
+    };
+
     const signOut = async () => {
         try {
-            signOutGoogle(); // clears GIS auto‑select
-            await auth.signOut(); // also clears any Firebase session you might have
+            await signOutGoogle();
+            await auth.signOut();
             setUser(null);
+            setIsNewUser(false);
         } catch (e) {
             console.error('Sign out error', e);
             throw e;
         }
     };
 
-    const value = { user, loading, signInWithGoogle, signOut };
-
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider value={{ user, loading, isNewUser, signInWithGoogle, signOut, updateProfile }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };

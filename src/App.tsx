@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import GetStarted from "./pages/GetStarted";
+import Onboarding from "./pages/Onboarding";
 import Pricing from "./pages/Pricing";
 import Editor from "./pages/Editor";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,11 @@ const App = () => (
               <Route path="/get-started" element={
                 <ProtectedRoute>
                   <GetStarted />
+                </ProtectedRoute>
+              } />
+              <Route path="/onboarding" element={
+                <ProtectedRoute>
+                  <Onboarding />
                 </ProtectedRoute>
               } />
               <Route path="/pricing" element={<Pricing />} />
