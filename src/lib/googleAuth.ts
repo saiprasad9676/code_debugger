@@ -19,14 +19,35 @@ export const initGoogleSignIn = (
     onSuccess: (payload: any) => void,
     onError?: (err: any) => void
 ) => {
-    // The `google` global is injected by the GIS script (see index.html)
-    // @ts-ignore – we know the script will provide this object
+    // Check if script is loaded, if not, load it dynamically
+    // @ts-ignore
     if (!window.google?.accounts?.id) {
-        const err = new Error('Google Identity Services script not loaded');
-        console.error(err);
-        onError?.(err);
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+            initializeGis(containerId, onSuccess, onError);
+        };
+        script.onerror = (e) => {
+            const err = new Error('Failed to load Google Identity Services script');
+            console.error(err, e);
+            onError?.(err);
+        };
+        document.head.appendChild(script);
         return;
     }
+
+    initializeGis(containerId, onSuccess, onError);
+};
+
+const initializeGis = (
+    containerId: string,
+    onSuccess: (payload: any) => void,
+    onError?: (err: any) => void
+) => {
+    // @ts-ignore
+    if (!window.google?.accounts?.id) return;
 
     // Initialise the GIS client
     // @ts-ignore
