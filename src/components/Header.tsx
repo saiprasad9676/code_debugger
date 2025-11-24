@@ -70,9 +70,10 @@ const Header: React.FC = () => {
         </div>
 
         <nav className="hidden md:flex items-center space-x-8">
-          <a href="#features" className="font-medium transition-colors hover:text-primary">Features</a>
-          <a href="#editor" className="font-medium transition-colors hover:text-primary">Editor</a>
-          <a href="#about" className="font-medium transition-colors hover:text-primary">About</a>
+          <Link to="/" className="font-medium transition-colors hover:text-primary">Home</Link>
+          <Link to="/#features" className="font-medium transition-colors hover:text-primary">Features</Link>
+          <Link to="/editor" className="font-medium transition-colors hover:text-primary">Editor</Link>
+          <Link to="/#about" className="font-medium transition-colors hover:text-primary">About</Link>
           <Link to="/pricing" className="font-medium transition-colors hover:text-primary">Pricing</Link>
           <div className="flex items-center space-x-4">
             <Button

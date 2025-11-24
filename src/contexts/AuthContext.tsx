@@ -41,34 +41,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
     useEffect(() => {
+        // Check localStorage for persisted user
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                const userData = JSON.parse(storedUser);
+                const userObj: User = {
+                    uid: userData.uid,
+                    displayName: userData.displayName,
+                    email: userData.email,
+                    photoURL: userData.photoURL,
+                    emailVerified: true,
+                    isAnonymous: false,
+                    providerId: 'google.com',
+                    getIdToken: async () => userData.uid,
+                } as unknown as User;
+                setUser(userObj);
+
+                // Check if profile is complete
+                fetch(`${API_URL}/api/user/${userData.uid}`)
+                    .then(res => res.ok ? res.json() : null)
+                    .then(data => {
+                        if (data) {
+                            setIsNewUser(!data.isProfileComplete);
+                        }
+                    })
+                    .catch(err => console.error("Error fetching user profile:", err));
+            } catch (error) {
+                console.error("Error parsing stored user:", error);
+                localStorage.removeItem('user');
+            }
+        }
+
         handleRedirectResult().catch((e) => console.error('Redirect error', e));
 
         const unsubscribe = onAuthStateChanged(auth, async (u) => {
-            setUser(u);
-
             if (u) {
+                setUser(u);
                 // Fetch user profile from backend to check if profile is complete
                 try {
                     const response = await fetch(`${API_URL}/api/user/${u.uid}`);
                     if (response.ok) {
                         const userData = await response.json();
-                        // If profile is not complete, mark as new user
                         setIsNewUser(!userData.isProfileComplete);
                     } else {
-                        // If user doesn't exist in DB, they are new
                         setIsNewUser(true);
                     }
                 } catch (error) {
                     console.error("Error fetching user profile:", error);
                     setIsNewUser(false);
                 }
-            } else {
+            } else if (!storedUser) {
+                setUser(null);
                 setIsNewUser(false);
             }
 
             setLoading(false);
         });
 
+        setLoading(false);
         return unsubscribe;
     }, [API_URL]);
 
@@ -119,6 +150,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                             getIdToken: async () => userData.uid,
                         } as unknown as User;
 
+                        // Store in localStorage for persistence
+                        localStorage.setItem('user', JSON.stringify({
+                            uid: userData.uid,
+                            displayName: userData.displayName,
+                            email: userData.email,
+                            photoURL: userData.photoURL
+                        }));
+
                         setUser(userObj);
                         resolve();
                     } catch (error) {
@@ -160,6 +199,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             await signOutGoogle();
             await auth.signOut();
+            localStorage.removeItem('user');
             setUser(null);
             setIsNewUser(false);
         } catch (e) {
