@@ -25,29 +25,43 @@ app.post('/api/generate', async (req, res) => {
         if (!apiKey) {
             console.error("Error: GEMINI_API_KEY is missing");
             return res.status(500).json({ error: 'API key not configured on server' });
-        },
-        {
-            headers: {
-                "Content-Type": "application/json"
-            }
         }
+
+        console.log("Processing request for:", text.substring(0, 50) + "...");
+
+        try {
+            // Using gemini-1.5-pro as it is the current stable version
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+                {
+                    contents: [{ parts: [{ text }] }],
+                    generationConfig: {
+                        maxOutputTokens: maxTokens,
+                        temperature
+                    }
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                }
             );
 
-const data = response.data;
-res.json(data);
+            const data = response.data;
+            res.json(data);
 
         } catch (apiError) {
-    console.error("Gemini API Error:", apiError.response?.data || apiError.message);
-    const status = apiError.response?.status || 500;
-    const message = apiError.response?.data?.error?.message || apiError.message;
+            console.error("Gemini API Error:", apiError.response?.data || apiError.message);
+            const status = apiError.response?.status || 500;
+            const message = apiError.response?.data?.error?.message || apiError.message;
 
-    res.status(status).json({ error: message });
-}
+            res.status(status).json({ error: message });
+        }
 
     } catch (error) {
-    console.error("Server Error:", error);
-    res.status(500).json({ error: error.message });
-}
+        console.error("Server Error:", error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.listen(PORT, () => {
