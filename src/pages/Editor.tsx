@@ -5,13 +5,28 @@ import { ArrowLeft, Sun, Moon } from 'lucide-react';
 import CodeEditor from '@/components/CodeEditor';
 import { useTheme } from '@/components/ThemeProvider';
 import { Button } from '@/components/ui/button';
+import Particles from '@/components/Particles';
 
 const Editor = () => {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background flex flex-col relative">
+      {/* Particles Background */}
+      <div className="fixed inset-0 z-0">
+        <Particles
+          particleColors={['#ffffff', '#ffffff']}
+          particleCount={200}
+          particleSpread={10}
+          speed={0.1}
+          particleBaseSize={100}
+          moveParticlesOnHover={true}
+          alphaParticles={false}
+          disableRotation={false}
+        />
+      </div>
+
+      <div className="container mx-auto px-4 py-8 relative z-10">
         <div className="flex justify-between items-center mb-8">
           <Link to="/" className="inline-flex items-center text-primary hover:underline">
             <ArrowLeft className="h-4 w-4 mr-2" />

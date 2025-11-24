@@ -4,7 +4,7 @@ import { ArrowLeft, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTypewriter, useFadeIn } from '@/utils/animations';
 import { toast } from "sonner";
-import Squares from '@/components/Squares';
+import Particles from '@/components/Particles';
 import GlitchButton from '@/components/GlitchButton';
 
 const GetStarted = () => {
@@ -21,12 +21,15 @@ const GetStarted = () => {
   return (
     <div className="min-h-screen bg-black flex flex-col relative overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <Squares
-          speed={0.5}
-          squareSize={40}
-          direction='diagonal'
-          borderColor='#333'
-          hoverFillColor='#222'
+        <Particles
+          particleColors={['#ffffff', '#ffffff']}
+          particleCount={200}
+          particleSpread={10}
+          speed={0.1}
+          particleBaseSize={100}
+          moveParticlesOnHover={true}
+          alphaParticles={false}
+          disableRotation={false}
         />
       </div>
       <div className="container mx-auto px-4 py-8 relative z-10">
