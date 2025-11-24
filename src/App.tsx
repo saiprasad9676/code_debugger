@@ -13,6 +13,7 @@ const queryClient = new QueryClient();
 
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -24,9 +25,17 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/get-started" element={<GetStarted />} />
+              <Route path="/get-started" element={
+                <ProtectedRoute>
+                  <GetStarted />
+                </ProtectedRoute>
+              } />
               <Route path="/pricing" element={<Pricing />} />
-              <Route path="/editor" element={<Editor />} />
+              <Route path="/editor" element={
+                <ProtectedRoute>
+                  <Editor />
+                </ProtectedRoute>
+              } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

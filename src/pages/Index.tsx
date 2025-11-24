@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AIChat from '@/components/AIChat';
@@ -33,8 +34,30 @@ const Index = () => {
   const section1Fade = useFadeIn(500);
   const { ref: featuresRef, isIntersecting: featuresVisible } = useScrollReveal();
 
-  const handleGetStarted = () => {
+  const { user, signInWithGoogle } = useAuth();
+
+  const handleGetStarted = async () => {
+    if (!user) {
+      try {
+        await signInWithGoogle();
+      } catch (error) {
+        console.error("Login failed:", error);
+        return;
+      }
+    }
     navigate('/get-started');
+  };
+
+  const handleStartCoding = async () => {
+    if (!user) {
+      try {
+        await signInWithGoogle();
+      } catch (error) {
+        console.error("Login failed:", error);
+        return;
+      }
+    }
+    navigate('/editor');
   };
 
   const handleWatchDemo = () => {
@@ -143,14 +166,14 @@ const Index = () => {
                 <GlitchButton
                   size="lg"
                   className="rounded-full text-lg px-8 bg-white text-black hover:bg-gray-200"
-                  onClick={() => navigate('/editor')}
+                  onClick={handleStartCoding}
                 >
                   Start Coding <ArrowRight className="ml-2 h-5 w-5" />
                 </GlitchButton>
                 <GlitchButton
                   size="lg"
                   className="rounded-full text-lg px-8 bg-transparent border border-white text-white hover:bg-white/10"
-                  onClick={() => navigate('/get-started')}
+                  onClick={handleGetStarted}
                 >
                   Learn More
                 </GlitchButton>
