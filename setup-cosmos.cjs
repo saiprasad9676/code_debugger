@@ -32,6 +32,15 @@ async function main() {
         });
         console.log(`Container '${containerId}' ready.`);
 
+        // Create Workspaces container
+        const workspacesContainerId = "Workspaces";
+        console.log(`\nCreating/Verifying container: ${workspacesContainerId}...`);
+        const { container: workspacesContainer } = await database.containers.createIfNotExists({
+            id: workspacesContainerId,
+            partitionKey: "/uid"
+        });
+        console.log(`Container '${workspacesContainerId}' ready.`);
+
         console.log("\nSetup complete! ✅");
 
     } catch (error) {

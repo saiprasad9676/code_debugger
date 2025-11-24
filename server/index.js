@@ -18,13 +18,26 @@ const COSMOSDB_URI = process.env.COSMOSDB_URI;
 const COSMOSDB_KEY = process.env.COSMOSDB_KEY;
 const DATABASE_ID = "CodeDebuggerDB";
 const CONTAINER_ID = "Users";
+const WORKSPACES_CONTAINER_ID = "Workspaces";
 
 let cosmosClient;
 let userContainer;
+let workspacesContainer;
 
 if (COSMOSDB_URI && COSMOSDB_KEY) {
     cosmosClient = new CosmosClient({ endpoint: COSMOSDB_URI, key: COSMOSDB_KEY });
-    userContainer = cosmosClient.database(DATABASE_ID).container(CONTAINER_ID);
+    const database = cosmosClient.database(DATABASE_ID);
+    userContainer = database.container(CONTAINER_ID);
+
+    // Initialize workspaces container (create if not exists)
+    database.containers.createIfNotExists({
+        id: WORKSPACES_CONTAINER_ID,
+        partitionKey: "/uid"
+    }).then(() => {
+        workspacesContainer = database.container(WORKSPACES_CONTAINER_ID);
+        console.log("Workspaces Container Initialized");
+    });
+
     console.log("Cosmos DB Client Initialized");
 } else {
     console.warn("Cosmos DB credentials missing. User persistence will not work.");
@@ -182,6 +195,69 @@ app.post('/api/generate', async (req, res) => {
     } catch (error) {
         console.error("Server Error:", error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// Save Workspace
+app.post('/api/workspace/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+        const { code, chatHistory, language } = req.body;
+
+        if (!workspacesContainer) {
+            return res.status(503).json({ error: "Database service unavailable" });
+        }
+
+        const workspaceId = `workspace_${uid}`;
+        const workspace = {
+            id: workspaceId,
+            uid,
+            code: code || "",
+            chatHistory: chatHistory || [],
+            language: language || "javascript",
+            lastSaved: new Date().toISOString()
+        };
+
+        // Upsert (create or replace)
+        await workspacesContainer.items.upsert(workspace);
+        console.log(`Workspace saved for user: ${uid}`);
+        return res.json({ message: "Workspace saved successfully", workspace });
+
+    } catch (error) {
+        console.error("Save Workspace Error:", error);
+        res.status(500).json({ error: "Failed to save workspace" });
+    }
+});
+
+// Load Workspace
+app.get('/api/workspace/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+
+        if (!workspacesContainer) {
+            return res.status(503).json({ error: "Database service unavailable" });
+        }
+
+        const workspaceId = `workspace_${uid}`;
+
+        try {
+            const { resource: workspace } = await workspacesContainer.item(workspaceId, uid).read();
+            return res.json(workspace);
+        } catch (error) {
+            if (error.code === 404) {
+                // No workspace found, return empty
+                return res.json({
+                    code: "",
+                    chatHistory: [],
+                    language: "javascript"
+                });
+            }
+            throw error;
+        }
+
+    } catch (error) {
+        console.error("Load Workspace Error:", error);
+        res.status(500).json({ error: "Failed to load workspace" });
     }
 });
 

@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import Index from "./pages/Index";
 import GetStarted from "./pages/GetStarted";
 import Onboarding from "./pages/Onboarding";
+import ProfilePage from "./pages/ProfilePage";
 import Pricing from "./pages/Pricing";
 import Editor from "./pages/Editor";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,11 @@ const AppContent = () => {
       <Route path="/onboarding" element={
         <ProtectedRoute>
           <Onboarding />
+        </ProtectedRoute>
+      } />
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <ProfilePage />
         </ProtectedRoute>
       } />
       <Route path="/pricing" element={<Pricing />} />

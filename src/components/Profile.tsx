@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import {
 
 export const Profile = () => {
     const { user, signOut } = useAuth();
+    const navigate = useNavigate();
 
     if (!user) return null;
 
@@ -36,6 +38,9 @@ export const Profile = () => {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    View Profile
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={signOut}>
                     Log out
                 </DropdownMenuItem>
