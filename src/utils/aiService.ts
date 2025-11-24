@@ -29,37 +29,31 @@ export async function getAICompletion({
   try {
     console.log("Sending AI request with text:", text);
 
-    // Use provided key or environment variable
-    const keyToUse = apiKey || import.meta.env.VITE_GEMINI_API_KEY;
+    // Use configured backend URL or default to local
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-    // Log key usage (masked)
-    console.log("Using API Key:", keyToUse ? `${keyToUse.substring(0, 4)}...` : "None");
-
-    // Try to call the real API first
+    // Try to call the backend API
     try {
-      // Using gemini-1.5-pro as it is the current stable version
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent`, {
+      const response = await fetch(`${apiUrl}/api/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": keyToUse
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text }] }],
-          generationConfig: {
-            maxOutputTokens: maxTokens,
-            temperature
-          }
+          text,
+          maxTokens,
+          temperature
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error?.message || response.statusText;
-        throw new Error(`API error: ${response.status} - ${errorMessage}`);
+        const errorMessage = errorData.error || response.statusText;
+        throw new Error(`Backend error: ${response.status} - ${errorMessage}`);
       }
 
       const data = await response.json();
+      // The backend returns the full Gemini response structure
       const generatedText = data.candidates[0].content.parts[0].text;
 
       console.log("AI response:", generatedText);
