@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, signInWithGoogle as firebaseSignIn, signOut as firebaseSignOut } from '@/lib/firebase';
+import { auth, signInWithGoogle as firebaseSignIn, signOut as firebaseSignOut, handleRedirectResult } from '@/lib/firebase';
 
 interface AuthContextType {
     user: User | null;
@@ -28,6 +28,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Handle redirect result on mount
+        handleRedirectResult().catch((error) => {
+            console.error('Redirect result error:', error);
+        });
+
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setUser(user);
             setLoading(false);
