@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, Copy, Download, Code2, Zap, Check, X, Settings } from 'lucide-react';
+import { Play, Copy, Download, Code2, Zap, Check, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import GlitchButton from '@/components/GlitchButton';
 import { useScrollReveal } from '@/utils/animations';
@@ -44,13 +44,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
   // API Key State
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  const saveApiKey = () => {
-    localStorage.setItem('gemini_api_key', apiKey);
-    setIsSettingsOpen(false);
-    toast.success("API Key saved successfully");
-  };
 
   useEffect(() => {
     const loadPyodideScript = async () => {
@@ -329,7 +322,7 @@ Instructions:
         const errorMessage = response.errorMessage || 'Unknown error';
         console.error("AI Response error:", errorMessage);
         toast.error(`Failed to get AI suggestions: ${errorMessage}`);
-        setOutput(`AI Error: ${errorMessage}\n\nPlease check your API key in Settings or try again later.`);
+        setOutput(`AI Error: ${errorMessage}\n\nPlease try again later.`);
         setHasError(true);
       }
     } catch (error: any) {
@@ -340,7 +333,7 @@ Instructions:
 
       const errorMessage = error.message || "Unknown error";
       toast.error("Failed to get AI suggestions");
-      setOutput(`AI Error: ${errorMessage}\n\nPlease check your API key in Settings or try again later.`);
+      setOutput(`AI Error: ${errorMessage}\n\nPlease try again later.`);
       setHasError(true);
     } finally {
       setIsFixingWithAI(false);
@@ -441,49 +434,6 @@ Instructions:
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4 mr-1" />
-                <span className="text-xs">Settings</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Editor Settings</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="apiKey" className="text-right">
-                    API Key
-                  </Label>
-                  <Input
-                    id="apiKey"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="Enter Google Gemini API Key"
-                    className="col-span-3"
-                    type="password"
-                  />
-                </div>
-                <div className="col-span-4 text-xs text-muted-foreground space-y-2">
-                  <p className="font-semibold">How to get your FREE API key:</p>
-                  <ol className="list-decimal list-inside space-y-1 ml-2">
-                    <li>Visit <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google AI Studio</a></li>
-                    <li>Sign in with your Google account</li>
-                    <li>Click "Create API Key"</li>
-                    <li>Copy the key and paste it above</li>
-                  </ol>
-                  <p className="text-yellow-600 dark:text-yellow-500 mt-2">
-                    ⚠️ The shared key has quota limits. Use your own key for unlimited AI fixes!
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={saveApiKey}>Save Changes</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
           <Button
             variant="ghost"
             size="sm"
